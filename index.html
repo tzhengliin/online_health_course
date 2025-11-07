@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>健康學習課程紀錄表</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <style>
+        body {
+            padding: 20px;
+        }
+        /* 讓勾勾圖示變為綠色且置中 */
+        .check-mark {
+            color: #198754; /* Bootstrap 'success' color */
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+        .table-center th,
+        .table-center td {
+            text-align: center;
+            vertical-align: middle;
+        }
+        /* 序號和姓名欄位靠左 */
+        .table-center td:first-child,
+        .table-center td:nth-child(2) {
+             text-align: left;
+        }
+        .table-center th:first-child,
+        .table-center th:nth-child(2) {
+             text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 class="h3 mb-3">健康學習課程紀錄表</h1>
+
+        <div id="loading" class="alert alert-secondary" role="alert">
+            正在從 Google 試算表載入資料…
+        </div>
+        <div id="error" class="alert alert-danger d-none" role="alert"></div>
+
+        <div class="table-responsive">
+            <table id="dataTable" class="table table-striped table-bordered table-hover table-center">
+                <thead id="theadRow" class="table-light">
+                    </thead>
+                <tbody id="tbody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ==== 設定 ====
+        // !!! 請將 "YOUR_API_KEY_HERE" 替換為您自己的 Google API 金鑰 !!!
+        const API_KEY = "AIzaSyD14dE-5ouFvIxnTrwF3zhHqFhh9OW0q8c"; 
+
+        // 這是您提供的 Google 試算表 ID
+        const SHEET_ID = "1V_dTMDbUuOj6Oa7E3tFChrQVaJHwcSNac6AIyEY_15A";
+
+        // !!! 請確認您的工作表分頁名稱，預設為 "工作表1" !!!
+        // (例如: "Sheet1" 或 "課程紀錄")
+        const SHEET_NAME = "工作表1"; 
+
+        // 預計讀取的欄位範圍 (A欄 到 K欄)
+        const SHEET_RANGE = "A:K";
+
+        // ==== DOM ====
+        const $loading = document.getElementById("loading");
+        const $error = document.getElementById("error");
+        const $thead = document.getElementById("theadRow");
+        const $tbody = document.getElementById("tbody");
+        const $dataTable = document.getElementById("dataTable");
+
+        // 勾勾圖示 (也可以用 ✓ &#10003;)
+        const CHECK_ICON = "✔"; // ✔
+
+        // 頁面載入時自動抓取資料
+        document.addEventListener("DOMContentLoaded", fetchAndRender);
+
+        /**
+         * 抓取 Google Sheet 資料並渲染表格
+         */
+        async function fetchAndRender() {
+            toggleLoading(true);
+            clearError();
+            $thead.innerHTML = "";
+            $tbody.innerHTML = "";
+            $dataTable.classList.add("d-none"); // 先隱藏表格
+
+            // 組合 API 網址
+            const fullRange = `${SHEET_NAME}!${SHEET_RANGE}`;
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(fullRange)}?key=${API_KEY}`;
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    // 檢查是否為 API 金鑰或權限問題
+                    if (response.status === 403) {
+                         showError(`讀取失敗 (HTTP ${response.status})：<br>1. 請檢查您的 API 金鑰是否正確。<br>2. 請檢查 Google 試算表是否已開啟「知道連結的任何人皆可檢視」。`);
+                    } else if (response.status === 400) {
+                         showError(`讀取失敗 (HTTP ${response.status})：<br>1. 請檢查您的 SHEET_ID 是否正確。<br>2. 請檢查工作表名稱 (SHEET_NAME) 是否為「${SHEET_NAME}」。`);
+                    } else {
+                        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+                    }
+                    toggleLoading(false);
+                    return;
+                }
+
+                const data = await response.json();
+                const values = data.values || [];
+
+                if (!values.length) {
+                    showError("工作表沒有資料。");
+                    toggleLoading(false);
+                    return;
+                }
+
+                // 取得表頭 (第一列)
+                const headerRow = values[0];
+                // 取得資料 (第二列開始)
+                const bodyRows = values.slice(1);
+
+                // 渲染表格
+                renderTable(headerRow, bodyRows);
+                $dataTable.classList.remove("d-none"); // 顯示表格
+
+            } catch (err) {
+                console.error(err);
+                showError("讀取失敗：" + (err?.message || err) + "。請檢查網路連線或 API 設定。");
+            } finally {
+                toggleLoading(false);
+            }
+        }
+
+        /**
+         * 將資料渲染到 HTML 表格
+         */
+        function renderTable(headerRow, bodyRows) {
+            // 1. 渲染表頭
+            let theadHtml = "<tr>";
+            for (const header of headerRow) {
+                theadHtml += `<th scope="col">${escapeHtml(header)}</th>`;
+            }
+            theadHtml += "</tr>";
+            $thead.innerHTML = theadHtml;
+
+            // 2. 渲染資料列
+            let tbodyHtml = "";
+            for (const row of bodyRows) {
+                // 忽略空行
+                if (row.every(cell => (cell || "").trim() === "")) continue;
+
+                tbodyHtml += "<tr>";
+                for (let i = 0; i < headerRow.length; i++) {
+                    const cellValue = row[i] || ""; // 取得儲存格資料
+                    let cellDisplay = "";
+
+                    // 檢查是否為 "V"
+                    if (cellValue.trim().toUpperCase() === "V") {
+                        cellDisplay = `<div class="check-mark">${CHECK_ICON}</div>`;
+                    } else {
+                        cellDisplay = escapeHtml(cellValue);
+                    }
+                    
+                    // 序號欄位 (第一欄) 用 <th> 標籤
+                    if (i === 0) {
+                         tbodyHtml += `<th scope="row">${cellDisplay}</th>`;
+                    } else {
+                         tbodyHtml += `<td>${cellDisplay}</td>`;
+                    }
+                }
+                tbodyHtml += "</tr>";
+            }
+            $tbody.innerHTML = tbodyHtml;
+        }
+
+        // === 小工具 ===
+
+        function toggleLoading(show) {
+            $loading.classList.toggle("d-none", !show);
+        }
+
+        function showError(msg) {
+            $error.innerHTML = msg; // 使用 .innerHTML 以便顯示 <br>
+            $error.classList.remove("d-none");
+        }
+
+        function clearError() {
+            $error.textContent = "";
+            $error.classList.add("d-none");
+        }
+
+        // 簡易 HTML 跳脫，防止 XSS
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+    </script>
+</body>
+</html>
