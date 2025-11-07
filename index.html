@@ -279,7 +279,7 @@
 
                 // 遍歷所有學員 (每一列)
                 for (const row of rows) {
-                    const name = row[1] || "匿名"; // 假設 B 欄 (index 1) 是姓名
+                    const name = row[1].substring(1, 3) || "匿名"; // 假設 B 欄 (index 1) 是姓名
                     const reflectionText = row[classColIndex] || "";
 
                     // 如果心得文字不是空的，才建立卡片
