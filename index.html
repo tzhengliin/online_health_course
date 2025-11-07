@@ -214,7 +214,7 @@
                     const classNum = i - 2; 
                     const mobileHeader = `<span class="d-inline d-sm-none">${classNum}</span>`; 
                     if (i === 2) {
-                        mobileHeader = `<span class="d-inline d-sm-none">報到</span>`; 
+                        const mobileHeader = `<span class="d-inline d-sm-none">報到</span>`; 
                     }
                     const desktopHeader = `<span class="d-none d-sm-inline">${fullHeader}</span>`;
                     theadHtml += `<th scope="col" class="col-class">${mobileHeader}${desktopHeader}</th>`;
