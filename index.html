@@ -20,35 +20,46 @@
             text-align: center;
             vertical-align: middle;
         }
-
-        /* --- MODIFIED: 修改靠左對齊的規則 --- */
-        /* 序號和姓名欄位靠左 (使用 class) */
         .table-center .col-id,
         .table-center .col-name {
              text-align: left;
         }
 
-        /* --- NEW: 手機版 (<= 576px) 規則 --- */
+        /* --- NEW: 心得卡片樣式 --- */
+        .reflection-card {
+            border-left-width: 4px;
+            border-left-color: var(--bs-primary);
+        }
+        .reflection-card-body {
+            /* 讓卡片內文中的換行 (Enter) 能夠正確顯示 */
+            white-space: pre-wrap; 
+        }
+
         @media (max-width: 576px) {
             .mobile-hide {
-                display: none; /* 隱藏標記 .mobile-hide 的元素 */
+                display: none;
             }
             body {
-                padding: 10px; /* 手機版邊距小一點 */
+                padding: 10px;
             }
             .h3 {
-                font-size: 1.5rem; /* 標題小一點 */
+                font-size: 1.5rem;
             }
-            /* 讓手機版表格文字小一點，塞得下更多 */
             .table {
                 font-size: 0.9rem;
+            }
+            /* --- NEW: 手機版頁籤文字縮小 --- */
+            .nav-tabs .nav-link {
+                font-size: 0.9rem;
+                padding: 0.5rem 0.6rem;
             }
         }
     </style>
 </head>
 <body>
 
-    <div class="container-fluid"> <h1 class="h3 mb-3">健康學習課程紀錄表</h1>
+    <div class="container-fluid">
+        <h1 class="h3 mb-3">健康學習課程紀錄表</h1>
 
         <div id="loading" class="alert alert-secondary" role="alert">
             正在從 Google 試算表載入資料…
@@ -63,13 +74,61 @@
                 </tbody>
             </table>
         </div>
+
+        <h2 class="h4 mt-5 mb-3">學員心得區塊</h2>
+
+        <ul class="nav nav-tabs nav-fill mb-3" id="reflectionTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="class-1-tab" data-bs-toggle="tab" data-bs-target="#class-1-pane" type="button" role="tab">第一堂</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="class-2-tab" data-bs-toggle="tab" data-bs-target="#class-2-pane" type="button" role="tab">第二堂</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="class-3-tab" data-bs-toggle="tab" data-bs-target="#class-3-pane" type="button" role="tab">第三堂</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="class-4-tab" data-bs-toggle="tab" data-bs-target="#class-4-pane" type="button" role="tab">第四堂</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="class-5-tab" data-bs-toggle="tab" data-bs-target="#class-5-pane" type="button" role="tab">第五堂</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="class-6-tab" data-bs-toggle="tab" data-bs-target="#class-6-pane" type="button" role="tab">第六堂</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="class-7-tab" data-bs-toggle="tab" data-bs-target="#class-7-pane" type="button" role="tab">第七堂</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="class-8-tab" data-bs-toggle="tab" data-bs-target="#class-8-pane" type="button" role="tab">第八堂</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="reflectionTabContent">
+            <div class="tab-pane fade show active" id="class-1-pane" role="tabpanel" aria-labelledby="class-1-tab"></div>
+            <div class="tab-pane fade" id="class-2-pane" role="tabpanel" aria-labelledby="class-2-tab"></div>
+            <div class="tab-pane fade" id="class-3-pane" role="tabpanel" aria-labelledby="class-3-tab"></div>
+            <div class="tab-pane fade" id="class-4-pane" role="tabpanel" aria-labelledby="class-4-tab"></div>
+            <div class="tab-pane fade" id="class-5-pane" role="tabpanel" aria-labelledby="class-5-tab"></div>
+            <div class="tab-pane fade" id="class-6-pane" role="tabpanel" aria-labelledby="class-6-tab"></div>
+            <div class="tab-pane fade" id="class-7-pane" role="tabpanel" aria-labelledby="class-7-tab"></div>
+            <div class="tab-pane fade" id="class-8-pane" role="tabpanel" aria-labelledby="class-8-tab"></div>
+        </div>
+
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
         // ==== 設定 ====
         const API_KEY = "AIzaSyD14dE-5ouFvIxnTrwF3zhHqFhh9OW0q8c"; 
         const SHEET_ID = "1V_dTMDbUuOj6Oa7E3tFChrQVaJHwcSNac6AIyEY_15A";
-        const SHEET_NAME = "工作表1"; 
+        
+        // --- MODIFIED: 兩個工作表名稱 ---
+        const SHEET_NAME_MAIN = "工作表1"; 
+        const SHEET_NAME_REFLECTION = "reflection";
+        
+        // 讀取範圍 (假設兩個工作表欄位都差不多)
         const SHEET_RANGE = "A:K";
 
         // ==== DOM ====
@@ -78,11 +137,15 @@
         const $thead = document.getElementById("theadRow");
         const $tbody = document.getElementById("tbody");
         const $dataTable = document.getElementById("dataTable");
+        // const $reflectionContainer = document.getElementById("reflectionTabContent"); // (在 renderReflections 中直接抓)
 
         const CHECK_ICON = "✔"; 
 
         document.addEventListener("DOMContentLoaded", fetchAndRender);
 
+        /**
+         * --- MODIFIED: 同時抓取兩個工作表 ---
+         */
         async function fetchAndRender() {
             toggleLoading(true);
             clearError();
@@ -90,110 +153,94 @@
             $tbody.innerHTML = "";
             $dataTable.classList.add("d-none"); 
 
-            const fullRange = `${SHEET_NAME}!${SHEET_RANGE}`;
-            const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(fullRange)}?key=${API_KEY}`;
+            // 組合兩個 API 網址
+            const mainRange = `${SHEET_NAME_MAIN}!${SHEET_RANGE}`;
+            const reflectionRange = `${SHEET_NAME_REFLECTION}!${SHEET_RANGE}`;
+            
+            const mainUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(mainRange)}?key=${API_KEY}`;
+            const reflectionUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(reflectionRange)}?key=${API_KEY}`;
 
             try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    if (response.status === 403) {
-                         showError(`讀取失敗 (HTTP ${response.status})：<br>1. 請檢查您的 API 金鑰是否正確。<br>2. 請檢查 Google 試算表是否已開啟「知道連結的任何人皆可檢視」。`);
-                    } else if (response.status === 400) {
-                         showError(`讀取失敗 (HTTP ${response.status})：<br>1. 請檢查您的 SHEET_ID 是否正確。<br>2. 請檢查工作表名稱 (SHEET_NAME) 是否為「${SHEET_NAME}」。`);
+                // 使用 Promise.all 並行抓取
+                const [respMain, respReflection] = await Promise.all([
+                    fetch(mainUrl),
+                    fetch(reflectionUrl)
+                ]);
+
+                // --- 1. 處理主表 (課程紀錄) ---
+                if (!respMain.ok) {
+                    handleFetchError(respMain, SHEET_NAME_MAIN);
+                } else {
+                    const dataMain = await respMain.json();
+                    const valuesMain = dataMain.values || [];
+                    if (!valuesMain.length) {
+                        showError(`「${SHEET_NAME_MAIN}」工作表沒有資料。`, true);
                     } else {
-                        throw new Error(`HTTP ${response.status} ${response.statusText}`);
+                        renderTable(valuesMain[0], valuesMain.slice(1));
+                        $dataTable.classList.remove("d-none");
                     }
-                    toggleLoading(false);
-                    return;
                 }
 
-                const data = await response.json();
-                const values = data.values || [];
-
-                if (!values.length) {
-                    showError("工作表沒有資料。");
-                    toggleLoading(false);
-                    return;
+                // --- 2. 處理分頁 (心得) ---
+                if (!respReflection.ok) {
+                    handleFetchError(respReflection, SHEET_NAME_REFLECTION);
+                } else {
+                    const dataReflection = await respReflection.json();
+                    // 呼叫新的函式來渲染心得
+                    renderReflections(dataReflection.values || []);
                 }
-
-                const headerRow = values[0];
-                const bodyRows = values.slice(1);
-
-                renderTable(headerRow, bodyRows);
-                $dataTable.classList.remove("d-none"); 
 
             } catch (err) {
                 console.error(err);
-                showError("讀取失敗：" + (err?.message || err) + "。請檢查網路連線或 API 設定。");
+                showError("讀取失敗：" + (err?.message || err));
             } finally {
                 toggleLoading(false);
             }
         }
 
         /**
-         * 將資料渲染到 HTML 表格
-         * --- MODIFIED: 此函式已大幅修改 ---
+         * 渲染課程紀錄表格 (同前一版)
          */
         function renderTable(headerRow, bodyRows) {
-            
-            // 1. 渲染表頭
             let theadHtml = "<tr>";
             for (let i = 0; i < headerRow.length; i++) {
                 const header = headerRow[i];
                 const fullHeader = escapeHtml(header);
-
                 if (i === 0) {
-                    // 第一欄 (序號): 加上 mobile-hide
                     theadHtml += `<th scope="col" class="col-id mobile-hide">${fullHeader}</th>`;
                 } else if (i === 1) {
-                    // 第二欄 (姓名): 正常顯示
                     theadHtml += `<th scope="col" class="col-name">${fullHeader}</th>`;
                 } else {
-                    // 第三欄起 (課堂): 顯示不同版本
-                    const classNum = i - 1; // 1, 2, 3...
-                    // 手機版: 僅顯示數字
+                    const classNum = i - 1; 
                     const mobileHeader = `<span class="d-inline d-sm-none">${classNum}</span>`; 
-                    // 桌機版: 顯示完整標題
                     const desktopHeader = `<span class="d-none d-sm-inline">${fullHeader}</span>`;
-                    
                     theadHtml += `<th scope="col" class="col-class">${mobileHeader}${desktopHeader}</th>`;
                 }
             }
             theadHtml += "</tr>";
             $thead.innerHTML = theadHtml;
 
-            // 2. 渲染資料列
             let tbodyHtml = "";
             for (const row of bodyRows) {
                 if (row.every(cell => (cell || "").trim() === "")) continue;
-
                 tbodyHtml += "<tr>";
                 for (let i = 0; i < headerRow.length; i++) {
                     const cellValue = row[i] || "";
                     let cellDisplay = "";
                     let cellClass = "";
-
                     if (i === 0) {
-                        // 第一欄 (序號): 加上 mobile-hide
                         cellClass = "col-id mobile-hide";
                         cellDisplay = escapeHtml(cellValue);
                         tbodyHtml += `<th scope="row" class="${cellClass}">${cellDisplay}</th>`;
-
                     } else if (i === 1) {
-                        // 第二欄 (姓名): 顯示不同版本
                         cellClass = "col-name";
-                        const fullName = escapeHtml(cellValue.substring(1, 3));
-                        // 手機版: 取前 3 個字
+                        const fullName = escapeHtml(cellValue);
                         const shortName = escapeHtml(cellValue.substring(1, 3)); 
-                        
                         const mobileName = `<span class="d-inline d-sm-none">${shortName}</span>`;
-                        const desktopName = `<span class="d-none d-sm-inline">${fullName}</span>`;
+                        const desktopName = `<span class="d-none d-sm-inline">${shortName}</span>`;
                         cellDisplay = `${mobileName}${desktopName}`;
-                        
                         tbodyHtml += `<td class="${cellClass}">${cellDisplay}</td>`;
-
                     } else {
-                        // 第三欄起 (課堂): 檢查 "V"
                         cellClass = "col-class";
                         if (cellValue.trim().toUpperCase() === "V") {
                             cellDisplay = `<div class="check-mark">${CHECK_ICON}</div>`;
@@ -208,15 +255,94 @@
             $tbody.innerHTML = tbodyHtml;
         }
 
-        // === 小工具 (無變動) ===
+        /**
+         * --- NEW: 渲染心得卡片到 8 個頁籤 ---
+         */
+        function renderReflections(values) {
+            if (!values || values.length < 2) {
+                console.warn("心得工作表沒有資料或只有表頭。");
+                return; 
+            }
+            
+            const rows = values.slice(1); // 略過表頭
+
+            // 遍歷 8 個堂課
+            for (let classNum = 1; classNum <= 8; classNum++) {
+                const pane = document.getElementById(`class-${classNum}-pane`);
+                if (!pane) continue; // 如果 HTML 結構錯誤，就跳過
+
+                // 假設欄位 C (index 2) 是第一堂, D (index 3) 是第二堂...
+                const classColIndex = classNum + 1; 
+                
+                let cardsHtml = '';
+                let reflectionCount = 0;
+
+                // 遍歷所有學員 (每一列)
+                for (const row of rows) {
+                    const name = row[1] || "匿名"; // 假設 B 欄 (index 1) 是姓名
+                    const reflectionText = row[classColIndex] || "";
+
+                    // 如果心得文字不是空的，才建立卡片
+                    if (reflectionText.trim() !== "") {
+                        cardsHtml += createCardHtml(name, reflectionText);
+                        reflectionCount++;
+                    }
+                }
+
+                // 根據是否有心得，填入內容
+                if (reflectionCount === 0) {
+                    pane.innerHTML = `<div class="alert alert-light">本堂課目前尚無心得。</div>`;
+                } else {
+                    pane.innerHTML = cardsHtml;
+                }
+            }
+        }
+
+        /**
+         * --- NEW: 建立單張心得卡片的 HTML ---
+         */
+        function createCardHtml(name, reflectionText) {
+            const safeName = escapeHtml(name);
+            // 注意: 我們保留換行符號，並在 CSS 中用 white-space: pre-wrap 處理
+            const safeText = escapeHtml(reflectionText);
+            
+            return `
+                <div class="card mb-3 reflection-card">
+                    <div class="card-header fw-bold">${safeName}</div>
+                    <div class="card-body reflection-card-body">
+                        <p class="card-text">${safeText}</p>
+                    </div>
+                </div>`;
+        }
+
+
+        // === 小工具 ===
 
         function toggleLoading(show) {
             $loading.classList.toggle("d-none", !show);
         }
 
-        function showError(msg) {
-            $error.innerHTML = msg;
+        // --- MODIFIED: 允許附加錯誤訊息 ---
+        function showError(msg, append = false) {
+            if (append && $error.innerHTML !== "") {
+                $error.innerHTML += `<br>${msg}`; // 附加新錯誤
+            } else {
+                $error.innerHTML = msg; // 覆蓋舊錯誤
+            }
             $error.classList.remove("d-none");
+        }
+        
+        // --- NEW: 處理 Fetch 錯誤的輔助函式 ---
+        function handleFetchError(response, sheetName) {
+            let errorMsg = `讀取「${sheetName}」失敗 (HTTP ${response.status})：`;
+            if (response.status === 403) {
+                 errorMsg += `請檢查 API 金鑰是否正確，或 Google 試算表是否已開啟「知道連結的任何人皆可檢視」。`;
+            } else if (response.status === 400) {
+                 errorMsg += `請檢查您的 SHEET_ID 或工作表名稱「${sheetName}」是否正確。`;
+            } else {
+                errorMsg += response.statusText;
+            }
+            showError(errorMsg, true); // 附加錯誤
         }
 
         function clearError() {
