@@ -212,10 +212,11 @@
                     theadHtml += `<th scope="col" class="col-name">${fullHeader}</th>`;
                 } else {
                     const classNum = i - 2; 
+                    const mobileHeader = ''
                     if (i == 2) {
-                        const mobileHeader = `<span class="d-inline d-sm-none">報到</span>`; 
+                        mobileHeader = `<span class="d-inline d-sm-none">報到</span>`; 
                     }else{
-                        const mobileHeader = `<span class="d-inline d-sm-none">${classNum}</span>`; 
+                        mobileHeader = `<span class="d-inline d-sm-none">${classNum}</span>`; 
                     }
                     const desktopHeader = `<span class="d-none d-sm-inline">${fullHeader}</span>`;
                     theadHtml += `<th scope="col" class="col-class">${mobileHeader}${desktopHeader}</th>`;
