@@ -3,307 +3,360 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>學員心得管理系統</title>
+    <title>學員心得填寫系統 (學員登入版)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <style>
       body {
-        padding-top: 2rem;
         background-color: #f8f9fa;
+        padding-top: 2rem;
       }
-      .container {
+      .main-card {
         max-width: 800px;
-        background: white;
-        padding: 2rem;
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin: 0 auto;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        border: none;
+        border-radius: 12px;
       }
-      .class-btn-group {
-        margin-bottom: 1rem;
+      .step-label {
+        font-weight: bold;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+      }
+      .btn-group-wrap {
         display: flex;
         flex-wrap: wrap;
-        gap: 5px;
+        gap: 0.5rem;
       }
-      .class-btn-group .btn {
-        flex: 1;
+      .btn-class {
+        flex: 1 0 auto;
         min-width: 80px;
       }
-      #loading-spinner {
-        display: none;
+      #loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+      .hidden {
+        display: none !important;
       }
     </style>
   </head>
   <body>
+    <div id="loading-overlay">
+      <div id="spinner" class="spinner-border text-primary mb-3" role="status"></div>
+      <h4 id="loading-text" class="text-secondary">正在初始化系統...</h4>
+      <div id="auth-container" class="mt-4 hidden text-center">
+        <p class="mb-3">請登入您的 Google 帳號以讀取並撰寫心得</p>
+        <button id="authorize_button" class="btn btn-primary btn-lg shadow"><img src="https://www.svgrepo.com/show/475656/google-color.svg" width="20" class="me-2" />登入 Google</button>
+      </div>
+      <div id="error-msg" class="text-danger mt-3 fw-bold"></div>
+    </div>
+
     <div class="container">
-      <h2 class="text-center mb-4">學員心得填寫系統</h2>
+      <div class="card main-card bg-white p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+          <h3 class="m-0">📝 學員心得填寫</h3>
+          <button id="signout_button" class="btn btn-outline-secondary btn-sm hidden">登出</button>
+        </div>
 
-      <div id="auth-section" class="text-center mb-4">
-        <p class="text-muted small">首次使用或更新資料前，請先登入 Google 帳號以取得權限。</p>
-        <button id="authorize_button" class="btn btn-primary" onclick="handleAuthClick()">登入 Google 帳號</button>
-        <button id="signout_button" class="btn btn-secondary" onclick="handleSignoutClick()" style="display: none">登出</button>
+        <div class="mb-4">
+          <label for="studentSelect" class="step-label">1. 請選擇您的名字：</label>
+          <select class="form-select form-select-lg" id="studentSelect" disabled>
+            <option selected disabled>等待資料載入...</option>
+          </select>
+          <div class="form-text text-muted">請務必選擇正確的名字，以免修改到他人的資料。</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="step-label">2. 選擇課程：</label>
+          <div class="btn-group-wrap" id="classButtons"></div>
+        </div>
+
+        <div class="mb-4">
+          <label for="reflectionContent" class="step-label"> 3. 心得內容 (<span id="currentLabel" class="text-primary">請先選擇課程</span>)： </label>
+          <textarea class="form-control" id="reflectionContent" rows="6" placeholder="選擇課程後即可開始輸入..." disabled></textarea>
+        </div>
+
+        <div class="d-grid">
+          <button class="btn btn-success btn-lg" id="updateButton" disabled>更新儲存到 Google 文件</button>
+        </div>
+
+        <div id="status-area" class="mt-3 text-center fw-bold"></div>
       </div>
-
-      <hr />
-
-      <div class="mb-3">
-        <label for="studentSelect" class="form-label fw-bold">1. 選擇學員：</label>
-        <select class="form-select" id="studentSelect" disabled>
-          <option selected disabled>資料載入中...</option>
-        </select>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label fw-bold">2. 選擇課程：</label>
-        <div class="class-btn-group" id="classButtons"></div>
-      </div>
-
-      <div class="mb-3">
-        <label for="reflectionContent" class="form-label fw-bold">3. 心得內容 (<span id="currentLabel">請先選擇學員與課程</span>)：</label>
-        <textarea class="form-control" id="reflectionContent" rows="6" disabled></textarea>
-      </div>
-
-      <div class="d-grid gap-2">
-        <button class="btn btn-success btn-lg" id="updateButton" onclick="updateReflection()" disabled>
-          更新心得到 Google 文件
-          <span id="loading-spinner" class="spinner-border spinner-border-sm ms-2" role="status"></span>
-        </button>
-      </div>
-
-      <div id="status-msg" class="mt-3 text-center fw-bold text-primary"></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
     <script async defer src="https://apis.google.com/js/api.js"></script>
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 
     <script>
-      /**
-       * 設定區
-       */
-      const API_KEY = "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"; // 請在此填入您的 API KEY
-      const CLIENT_ID = "652603876383-qka8rcn6oetrhk5kqnnjd4jtd748gm3a.apps.googleusercontent.com"; // 請在此填入您的 OAuth 2.0 Client ID
-      const SHEET_ID = "1V_dTMDbUuOj6Oa7E3tFChrQVaJHwcSNac6AIyEY_15A";
-
-      // *** 重要 ***: 請確認您的 Google 試算表分頁名稱。
-      // 根據您的描述，如果是一般預設可能為 '工作表1'，或根據內容可能為 'reflection'
-      const TAB_NAME = "reflection";
-
-      const SCOPES = "https://www.googleapis.com/auth/spreadsheets";
-
-      // 欄位對應 (C欄對應第一堂, J欄對應第八堂)
-      // A=0, B=1, C=2 ...
-      const CLASS_COLUMNS = ["C", "D", "E", "F", "G", "H", "I", "J"];
-      const CLASS_NAMES = ["第一堂", "第二堂", "第三堂", "第四堂", "第五堂", "第六堂", "第七堂", "第八堂"];
-
+      // 全域變數
+      let CONFIG = {};
       let tokenClient;
       let gapiInited = false;
       let gisInited = false;
-      let selectedRowIndex = null; // 試算表中的列數 (例如第2列)
-      let selectedColLetter = null; // 試算表中的欄位 (例如 'C')
 
-      // 程式載入點
-      window.onload = function () {
-        gapi.load("client", initializeGapiClient);
-        google.accounts.id.initialize({
-          client_id: CLIENT_ID,
-          callback: (response) => {
-            /* Handle credential response */
-          },
-        });
-        tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: CLIENT_ID,
-          scope: SCOPES,
-          callback: "", // defined later
-        });
-        gisInited = true;
-        generateClassButtons();
+      // 試算表欄位設定
+      // 假設 C欄=Index 2 (第一堂) ... J欄=Index 9 (第八堂)
+      const CLASS_COLUMNS = ["C", "D", "E", "F", "G", "H", "I", "J"];
+      const CLASS_NAMES = ["第一堂", "第二堂", "第三堂", "第四堂", "第五堂", "第六堂", "第七堂", "第八堂"];
+
+      // 當前狀態
+      let selectedRowIndex = null; // 試算表中的實際列號 (1-based)
+      let selectedColLetter = null; // 當前選擇的欄位字母
+
+      // DOM 元素
+      const dom = {
+        overlay: document.getElementById("loading-overlay"),
+        spinner: document.getElementById("spinner"),
+        loadingText: document.getElementById("loading-text"),
+        authContainer: document.getElementById("auth-container"),
+        authBtn: document.getElementById("authorize_button"),
+        signoutBtn: document.getElementById("signout_button"),
+        studentSelect: document.getElementById("studentSelect"),
+        classContainer: document.getElementById("classButtons"),
+        textarea: document.getElementById("reflectionContent"),
+        updateBtn: document.getElementById("updateButton"),
+        statusArea: document.getElementById("status-area"),
+        currentLabel: document.getElementById("currentLabel"),
+        errorMsg: document.getElementById("error-msg"),
       };
 
-      async function initializeGapiClient() {
-        await gapi.client.init({
-          apiKey: API_KEY,
-          discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
-        });
-        gapiInited = true;
-        maybeEnableButtons();
-        // 嘗試讀取學員名單 (如果 API KEY 有權限)
-        loadStudents();
+      // 1. 程式入口：讀取 config.json
+      window.onload = async () => {
+        try {
+          const resp = await fetch("./config.json");
+          if (!resp.ok) throw new Error("找不到 config.json 檔案");
+          CONFIG = await resp.json();
+
+          // 載入 Google Scripts
+          gapi.load("client", initializeGapiClient);
+          google.accounts.id.initialize({
+            client_id: CONFIG.clientId,
+            callback: handleCredentialResponse,
+          });
+        } catch (e) {
+          showError("初始化失敗: " + e.message);
+        }
+      };
+
+      function showError(msg) {
+        dom.spinner.classList.add("hidden");
+        dom.loadingText.classList.add("hidden");
+        dom.errorMsg.innerText = msg;
       }
 
-      function maybeEnableButtons() {
-        if (gapiInited && gisInited) {
-          document.getElementById("authorize_button").style.display = "inline-block";
+      // 2. 初始化 GAPI (Google API Client)
+      async function initializeGapiClient() {
+        try {
+          await gapi.client.init({
+            apiKey: CONFIG.apiKey,
+            discoveryDocs: ["https://sheets.googleapis.com/$discovery/rest?version=v4"],
+          });
+          gapiInited = true;
+          initializeGisClient();
+        } catch (err) {
+          showError("GAPI 初始化失敗，請檢查 API Key");
+          console.error(err);
         }
       }
 
-      function handleAuthClick() {
-        tokenClient.callback = async (resp) => {
-          if (resp.error !== undefined) {
-            throw resp;
-          }
-          document.getElementById("signout_button").style.display = "inline-block";
-          document.getElementById("authorize_button").style.display = "none";
-          loadStudents(); // 登入後重新載入，確保有權限
+      // 3. 初始化 GIS (Google Identity Services)
+      function initializeGisClient() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: CONFIG.clientId,
+          scope: "https://www.googleapis.com/auth/spreadsheets", // 請求讀寫權限
+          callback: async (resp) => {
+            if (resp.error !== undefined) {
+              throw resp;
+            }
+            // 登入成功
+            handleAuthSuccess();
+          },
+        });
+        gisInited = true;
+
+        // 顯示登入按鈕
+        dom.spinner.classList.add("hidden");
+        dom.loadingText.classList.add("hidden");
+        dom.authContainer.classList.remove("hidden");
+
+        // 綁定登入點擊
+        dom.authBtn.onclick = () => {
+          tokenClient.requestAccessToken({ prompt: "consent" });
         };
 
-        if (gapi.client.getToken() === null) {
-          tokenClient.requestAccessToken({ prompt: "consent" });
-        } else {
-          tokenClient.requestAccessToken({ prompt: "" });
-        }
+        // 綁定登出
+        dom.signoutBtn.onclick = handleSignout;
       }
 
-      function handleSignoutClick() {
+      function handleCredentialResponse(response) {
+        // Auto-login callback (optional use)
+      }
+
+      async function handleAuthSuccess() {
+        dom.authContainer.classList.add("hidden");
+        dom.spinner.classList.remove("hidden");
+        dom.loadingText.classList.remove("hidden");
+        dom.loadingText.innerText = "登入成功，正在讀取學員名單...";
+        dom.signoutBtn.classList.remove("hidden");
+
+        // 產生課程按鈕
+        generateClassButtons();
+
+        // 讀取資料
+        await loadStudents();
+
+        // 關閉遮罩
+        dom.overlay.classList.add("hidden");
+      }
+
+      function handleSignout() {
         const token = gapi.client.getToken();
         if (token !== null) {
           google.accounts.oauth2.revoke(token.access_token);
           gapi.client.setToken("");
-          document.getElementById("signout_button").style.display = "none";
-          document.getElementById("authorize_button").style.display = "inline-block";
-          document.getElementById("studentSelect").innerHTML = "<option disabled selected>請先登入</option>";
+          location.reload(); // 簡單重新整理頁面
         }
       }
 
-      // 產生 1-8 堂課按鈕
-      function generateClassButtons() {
-        const container = document.getElementById("classButtons");
-        CLASS_NAMES.forEach((name, index) => {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "btn btn-outline-primary";
-          btn.innerText = name;
-          btn.onclick = () => selectClass(index, btn);
-          container.appendChild(btn);
-        });
-      }
-
-      // 1. 讀取學員名單 (A欄序號, B欄姓名)
+      // 4. 讀取學員名單
       async function loadStudents() {
         try {
-          // 假設標題在第1列，資料從第2列開始。讀取 A2:B
           const response = await gapi.client.sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
-            range: `${TAB_NAME}!A2:B`,
+            spreadsheetId: CONFIG.sheetId,
+            range: `${CONFIG.tabName}!A2:B`, // 假設 A是序號 B是名字
           });
 
           const rows = response.result.values;
-          const select = document.getElementById("studentSelect");
-          select.innerHTML = "<option selected disabled>請選擇學員</option>";
+          dom.studentSelect.innerHTML = "<option selected disabled>請選擇您的名字</option>";
 
           if (!rows || rows.length === 0) {
-            alert("找不到學員資料");
+            alert("工作表中找不到資料");
             return;
           }
 
-          // 填充選單，記錄該學員在 Sheet 中的實際列號 (index + 2)
           rows.forEach((row, index) => {
-            const serial = row[0] || "";
-            const name = row[1] || "未命名";
-            const option = document.createElement("option");
-            option.value = index + 2; // 試算表列號 (從2開始)
-            option.text = `${serial} - ${name}`;
-            select.appendChild(option);
+            const name = row[1] || `學員 ${index + 1}`;
+            const opt = document.createElement("option");
+            opt.value = index + 2; // 試算表 Row Index (從1開始，且跳過標題)
+            opt.innerText = `${row[0] || ""} ${name}`;
+            dom.studentSelect.appendChild(opt);
           });
 
-          select.disabled = false;
-          select.addEventListener("change", (e) => {
+          dom.studentSelect.disabled = false;
+
+          // 監聽選擇改變
+          dom.studentSelect.addEventListener("change", (e) => {
             selectedRowIndex = e.target.value;
-            resetReflectionArea();
+            fetchReflection(); // 若已選課程，切換人名時也要重抓
           });
         } catch (err) {
           console.error(err);
-          document.getElementById("status-msg").innerText = "無法讀取名單，請確認是否已登入或工作表名稱正確。";
+          alert("讀取名單失敗，請確認您是否有此文件的檢視權限。");
         }
       }
 
-      // 切換課程按鈕
-      function selectClass(index, btnElement) {
-        // 處理按鈕樣式
+      // 產生按鈕
+      function generateClassButtons() {
+        dom.classContainer.innerHTML = "";
+        CLASS_NAMES.forEach((name, idx) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "btn btn-outline-primary btn-class";
+          btn.innerText = name;
+          btn.onclick = () => selectClass(idx, btn);
+          dom.classContainer.appendChild(btn);
+        });
+
+        // 綁定更新按鈕
+        dom.updateBtn.onclick = updateReflection;
+      }
+
+      // 5. 選擇課程與讀取心得
+      function selectClass(index, btnEl) {
+        // 樣式處理
         document.querySelectorAll("#classButtons .btn").forEach((b) => {
           b.classList.remove("btn-primary");
           b.classList.add("btn-outline-primary");
         });
-        btnElement.classList.remove("btn-outline-primary");
-        btnElement.classList.add("btn-primary");
+        btnEl.classList.remove("btn-outline-primary");
+        btnEl.classList.add("btn-primary");
 
         selectedColLetter = CLASS_COLUMNS[index];
-        const className = CLASS_NAMES[index];
-
-        // 更新 UI
-        document.getElementById("currentLabel").innerText = className;
-        document.getElementById("reflectionContent").disabled = false;
-        document.getElementById("updateButton").disabled = false;
+        dom.currentLabel.innerText = CLASS_NAMES[index];
 
         fetchReflection();
       }
 
-      function resetReflectionArea() {
-        document.getElementById("reflectionContent").value = "";
-        // 如果已經選了課程，重新讀取
-        if (selectedRowIndex && selectedColLetter) {
-          fetchReflection();
-        }
-      }
-
-      // 讀取特定學員、特定課程的心得
       async function fetchReflection() {
         if (!selectedRowIndex || !selectedColLetter) return;
 
-        document.getElementById("status-msg").innerText = "讀取中...";
-        const range = `${TAB_NAME}!${selectedColLetter}${selectedRowIndex}`;
+        dom.textarea.disabled = true;
+        dom.textarea.value = "讀取中...";
+        dom.updateBtn.disabled = true;
+        dom.statusArea.innerText = "";
 
         try {
+          const range = `${CONFIG.tabName}!${selectedColLetter}${selectedRowIndex}`;
           const response = await gapi.client.sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
+            spreadsheetId: CONFIG.sheetId,
             range: range,
           });
 
-          const values = response.result.values;
-          const content = values && values.length > 0 ? values[0][0] : "";
-
-          document.getElementById("reflectionContent").value = content;
-          document.getElementById("status-msg").innerText = "";
+          const val = response.result.values;
+          dom.textarea.value = val && val.length > 0 ? val[0][0] : "";
+          dom.textarea.disabled = false;
+          dom.updateBtn.disabled = false;
         } catch (err) {
           console.error(err);
-          document.getElementById("status-msg").innerText = "讀取失敗";
+          dom.textarea.value = "讀取錯誤";
+          dom.statusArea.innerText = "讀取失敗 (請確認網路或權限)";
+          dom.statusArea.className = "mt-3 text-center text-danger fw-bold";
         }
       }
 
-      // 更新心得
+      // 6. 更新寫入
       async function updateReflection() {
-        // 檢查是否已登入 (寫入需要 OAuth Token)
-        if (gapi.client.getToken() === null) {
-          alert("更新資料需要權限，請先點擊上方的「登入 Google 帳號」。");
-          tokenClient.requestAccessToken({ prompt: "consent" });
-          return;
-        }
+        if (!selectedRowIndex || !selectedColLetter) return;
 
-        const content = document.getElementById("reflectionContent").value;
-        const range = `${TAB_NAME}!${selectedColLetter}${selectedRowIndex}`;
+        const content = dom.textarea.value;
+        const range = `${CONFIG.tabName}!${selectedColLetter}${selectedRowIndex}`;
 
-        const spinner = document.getElementById("loading-spinner");
-        spinner.style.display = "inline-block";
-        document.getElementById("updateButton").disabled = true;
+        dom.updateBtn.disabled = true;
+        dom.updateBtn.innerText = "更新中...";
 
         try {
-          const response = await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
+          await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: CONFIG.sheetId,
             range: range,
             valueInputOption: "RAW",
-            resource: {
-              values: [[content]],
-            },
+            resource: { values: [[content]] },
           });
 
-          document.getElementById("status-msg").innerText = "更新成功！";
-          document.getElementById("status-msg").className = "mt-3 text-center fw-bold text-success";
+          dom.statusArea.innerText = "✅ 更新成功！";
+          dom.statusArea.className = "mt-3 text-center text-success fw-bold";
+
+          // 3秒後清除成功訊息
+          setTimeout(() => {
+            dom.statusArea.innerText = "";
+          }, 3000);
         } catch (err) {
           console.error(err);
-          document.getElementById("status-msg").innerText = "更新失敗，請檢查權限。";
-          document.getElementById("status-msg").className = "mt-3 text-center fw-bold text-danger";
+          dom.statusArea.innerText = "❌ 更新失敗 (您是否有編輯權限？)";
+          dom.statusArea.className = "mt-3 text-center text-danger fw-bold";
         } finally {
-          spinner.style.display = "none";
-          document.getElementById("updateButton").disabled = false;
+          dom.updateBtn.innerText = "更新儲存到 Google 文件";
+          dom.updateBtn.disabled = false;
         }
       }
     </script>
