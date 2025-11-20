@@ -161,6 +161,19 @@
                     fetch(reflectionUrl)
                 ]);
 
+                // --- 1. 處理主表 (課程紀錄) ---
+                if (!respMain.ok) {
+                    handleFetchError(respMain, SHEET_NAME_MAIN);
+                } else {
+                    const dataMain = await respMain.json();
+                    const valuesMain = dataMain.values || [];
+                    if (!valuesMain.length) {
+                        showError(`「${SHEET_NAME_MAIN}」工作表沒有資料。`, true);
+                    } else {
+                        renderTable(valuesMain[0], valuesMain.slice(1));
+                        $dataTable.classList.remove("d-none");
+                    }
+                }
 
                 // --- 2. 處理分頁 (心得) ---
                 if (!respReflection.ok) {
@@ -179,6 +192,13 @@
             }
         }
 
+        /**
+         * 渲染課程紀錄表格 (同前一版)
+         */
+        function renderTable(headerRow, bodyRows) {
+            let tbodyHtml = "";
+            $tbody.innerHTML = tbodyHtml;
+        }
 
         /**
          * --- NEW: 渲染心得卡片到 8 個頁籤 ---
@@ -286,3 +306,4 @@
     </script>
 </body>
 </html>
+
