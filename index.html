@@ -9,23 +9,9 @@
         body {
             padding: 20px;
         }
-        .check-mark {
-            color: #198754;
-            font-weight: bold;
-            text-align: center;
-            font-size: 1.2rem;
-        }
-        .table-center th,
-        .table-center td {
-            text-align: center;
-            vertical-align: middle;
-        }
-        .table-center .col-id,
-        .table-center .col-name {
-             text-align: left;
-        }
-
-        /* --- NEW: 心得卡片樣式 --- */
+        /* 移除原本表格相關的 CSS，因為表格已刪除 */
+        
+        /* --- 心得卡片樣式 --- */
         .reflection-card {
             border-left-width: 4px;
             border-left-color: var(--bs-primary);
@@ -36,23 +22,27 @@
         }
 
         @media (max-width: 576px) {
-            .mobile-hide {
-                display: none;
-            }
             body {
                 padding: 10px;
             }
             .h3 {
                 font-size: 1.5rem;
             }
-            .table {
-                font-size: 0.9rem;
-            }
-            /* --- NEW: 手機版頁籤文字縮小 --- */
+            /* --- 手機版頁籤文字縮小 --- */
             .nav-tabs .nav-link {
                 font-size: 0.9rem;
                 padding: 0.5rem 0.6rem;
             }
+        }
+        
+        /* 標題連結樣式微調 (可選) */
+        h1 a {
+            text-decoration: none;
+            color: inherit;
+        }
+        h1 a:hover {
+            text-decoration: underline;
+            color: var(--bs-primary);
         }
     </style>
 </head>
@@ -60,14 +50,15 @@
 
     <div class="container-fluid">
         <h1 class="h3 mb-3">
-            <a href="https://tzhengliin.github.io/online_health_course/table/">健康掌門人-輕鬆學 輕鬆看(11/12~11/28)</a>
+            <a href="https://tzhengliin.github.io/online_health_course/table/" target="_blank">健康掌門人-輕鬆學 輕鬆看(11/12~11/28)</a>
         </h1>
+        
         <p>歡迎一起線上輕鬆學營養，我們總共有8部營養學習影片，您只需要把握空檔時間，就可以一起學習，讓自己更健康，每次回饋心得，即可領取獎學金50元。</p>
+        
         <div id="loading" class="alert alert-secondary" role="alert">
-            正在從 Google 試算表載入資料…
+            正在從 Google 試算表載入心得資料…
         </div>
         <div id="error" class="alert alert-danger d-none" role="alert"></div>
-
 
         <h2 class="h4 mt-5 mb-3">學員心得分享區(提供大家互相學習)</h2>
 
@@ -109,6 +100,7 @@
             <div class="tab-pane fade" id="class-8-pane" role="tabpanel" aria-labelledby="class-8-tab"></div>
         </div>
 
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -118,69 +110,40 @@
         const API_KEY = "AIzaSyD14dE-5ouFvIxnTrwF3zhHqFhh9OW0q8c"; 
         const SHEET_ID = "1V_dTMDbUuOj6Oa7E3tFChrQVaJHwcSNac6AIyEY_15A";
         
-        // --- MODIFIED: 兩個工作表名稱 ---
-        const SHEET_NAME_MAIN = "Main"; 
+        // 修改：只需讀取 reflection 工作表
         const SHEET_NAME_REFLECTION = "reflection";
         
-        // 讀取範圍 (假設兩個工作表欄位都差不多)
+        // 讀取範圍
         const SHEET_RANGE = "A:K";
 
         // ==== DOM ====
         const $loading = document.getElementById("loading");
         const $error = document.getElementById("error");
-        const $thead = document.getElementById("theadRow");
-        const $tbody = document.getElementById("tbody");
-        const $dataTable = document.getElementById("dataTable");
-        // const $reflectionContainer = document.getElementById("reflectionTabContent"); // (在 renderReflections 中直接抓)
-
-        const CHECK_ICON = "✔"; 
+        // 已移除表格相關的 DOM 變數 ($thead, $tbody, $dataTable)
 
         document.addEventListener("DOMContentLoaded", fetchAndRender);
 
         /**
-         * --- MODIFIED: 同時抓取兩個工作表 ---
+         * 修改：只抓取心得工作表
          */
         async function fetchAndRender() {
             toggleLoading(true);
             clearError();
-            $thead.innerHTML = "";
-            $tbody.innerHTML = "";
-            $dataTable.classList.add("d-none"); 
 
-            // 組合兩個 API 網址
-            const mainRange = `${SHEET_NAME_MAIN}!${SHEET_RANGE}`;
+            // API 網址
             const reflectionRange = `${SHEET_NAME_REFLECTION}!${SHEET_RANGE}`;
-            
-            const mainUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(mainRange)}?key=${API_KEY}`;
             const reflectionUrl = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(reflectionRange)}?key=${API_KEY}`;
 
             try {
-                // 使用 Promise.all 並行抓取
-                const [respMain, respReflection] = await Promise.all([
-                    fetch(mainUrl),
-                    fetch(reflectionUrl)
-                ]);
+                // 只抓取 reflection
+                const respReflection = await fetch(reflectionUrl);
 
-                // --- 1. 處理主表 (課程紀錄) ---
-                if (!respMain.ok) {
-                    handleFetchError(respMain, SHEET_NAME_MAIN);
-                } else {
-                    const dataMain = await respMain.json();
-                    const valuesMain = dataMain.values || [];
-                    if (!valuesMain.length) {
-                        showError(`「${SHEET_NAME_MAIN}」工作表沒有資料。`, true);
-                    } else {
-                        renderTable(valuesMain[0], valuesMain.slice(1));
-                        $dataTable.classList.remove("d-none");
-                    }
-                }
-
-                // --- 2. 處理分頁 (心得) ---
+                // 處理回應
                 if (!respReflection.ok) {
                     handleFetchError(respReflection, SHEET_NAME_REFLECTION);
                 } else {
                     const dataReflection = await respReflection.json();
-                    // 呼叫新的函式來渲染心得
+                    // 渲染心得
                     renderReflections(dataReflection.values || []);
                 }
 
@@ -193,15 +156,7 @@
         }
 
         /**
-         * 渲染課程紀錄表格 (同前一版)
-         */
-        function renderTable(headerRow, bodyRows) {
-            let tbodyHtml = "";
-            $tbody.innerHTML = tbodyHtml;
-        }
-
-        /**
-         * --- NEW: 渲染心得卡片到 8 個頁籤 ---
+         * 渲染心得卡片到 8 個頁籤
          */
         function renderReflections(values) {
             if (!values || values.length < 2) {
@@ -214,7 +169,7 @@
             // 遍歷 8 個堂課
             for (let classNum = 1; classNum <= 8; classNum++) {
                 const pane = document.getElementById(`class-${classNum}-pane`);
-                if (!pane) continue; // 如果 HTML 結構錯誤，就跳過
+                if (!pane) continue; 
 
                 // 假設欄位 C (index 2) 是第一堂, D (index 3) 是第二堂...
                 const classColIndex = classNum + 1; 
@@ -244,11 +199,10 @@
         }
 
         /**
-         * --- NEW: 建立單張心得卡片的 HTML ---
+         * 建立單張心得卡片的 HTML
          */
         function createCardHtml(name, reflectionText) {
             const safeName = escapeHtml(name);
-            // 注意: 我們保留換行符號，並在 CSS 中用 white-space: pre-wrap 處理
             const safeText = escapeHtml(reflectionText);
             
             return `
@@ -267,17 +221,15 @@
             $loading.classList.toggle("d-none", !show);
         }
 
-        // --- MODIFIED: 允許附加錯誤訊息 ---
         function showError(msg, append = false) {
             if (append && $error.innerHTML !== "") {
-                $error.innerHTML += `<br>${msg}`; // 附加新錯誤
+                $error.innerHTML += `<br>${msg}`; 
             } else {
-                $error.innerHTML = msg; // 覆蓋舊錯誤
+                $error.innerHTML = msg; 
             }
             $error.classList.remove("d-none");
         }
         
-        // --- NEW: 處理 Fetch 錯誤的輔助函式 ---
         function handleFetchError(response, sheetName) {
             let errorMsg = `讀取「${sheetName}」失敗 (HTTP ${response.status})：`;
             if (response.status === 403) {
@@ -287,7 +239,7 @@
             } else {
                 errorMsg += response.statusText;
             }
-            showError(errorMsg, true); // 附加錯誤
+            showError(errorMsg, true);
         }
 
         function clearError() {
@@ -306,4 +258,3 @@
     </script>
 </body>
 </html>
-
