@@ -107,16 +107,6 @@
             <div class="tab-pane fade" id="class-8-pane" role="tabpanel" aria-labelledby="class-8-tab"></div>
         </div>
 
-        <p>心得繳交紀錄表</p>
-        <div class="table-responsive">
-            <table id="dataTable" class="table table-striped table-bordered table-hover table-center">
-                <thead id="theadRow" class="table-light">
-                </thead>
-                <tbody id="tbody">
-                </tbody>
-            </table>
-        </div>
-
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -169,19 +159,6 @@
                     fetch(reflectionUrl)
                 ]);
 
-                // --- 1. 處理主表 (課程紀錄) ---
-                if (!respMain.ok) {
-                    handleFetchError(respMain, SHEET_NAME_MAIN);
-                } else {
-                    const dataMain = await respMain.json();
-                    const valuesMain = dataMain.values || [];
-                    if (!valuesMain.length) {
-                        showError(`「${SHEET_NAME_MAIN}」工作表沒有資料。`, true);
-                    } else {
-                        renderTable(valuesMain[0], valuesMain.slice(1));
-                        $dataTable.classList.remove("d-none");
-                    }
-                }
 
                 // --- 2. 處理分頁 (心得) ---
                 if (!respReflection.ok) {
@@ -200,67 +177,6 @@
             }
         }
 
-        /**
-         * 渲染課程紀錄表格 (同前一版)
-         */
-        function renderTable(headerRow, bodyRows) {
-            let theadHtml = "<tr>";
-            for (let i = 0; i < headerRow.length; i++) {
-                const header = headerRow[i];
-                const fullHeader = escapeHtml(header);
-                if (i === 0) {
-                    theadHtml += `<th scope="col" class="col-id mobile-hide">${fullHeader}</th>`;
-                } else if (i === 1) {
-                    theadHtml += `<th scope="col" class="col-name">${fullHeader}</th>`;
-                } else {
-                    const classNum = i - 2; 
-                    let mobileHeader = '';
-                    if (i == 2) {
-                        mobileHeader = `<span class="d-inline d-sm-none">報到</span>`; 
-                    }else{
-                        mobileHeader = `<span class="d-inline d-sm-none">${classNum}</span>`; 
-                    }
-                    const desktopHeader = `<span class="d-none d-sm-inline">${fullHeader}</span>`;
-                    theadHtml += `<th scope="col" class="col-class">${mobileHeader}${desktopHeader}</th>`;
-                }
-            }
-            theadHtml += "</tr>";
-            $thead.innerHTML = theadHtml;
-
-            let tbodyHtml = "";
-            for (const row of bodyRows) {
-                if (row.every(cell => (cell || "").trim() === "")) continue;
-                tbodyHtml += "<tr>";
-                for (let i = 0; i < headerRow.length; i++) {
-                    const cellValue = row[i] || "";
-                    let cellDisplay = "";
-                    let cellClass = "";
-                    if (i === 0) {
-                        cellClass = "col-id mobile-hide";
-                        cellDisplay = escapeHtml(cellValue);
-                        tbodyHtml += `<th scope="row" class="${cellClass}">${cellDisplay}</th>`;
-                    } else if (i === 1) {
-                        cellClass = "col-name";
-                        const fullName = escapeHtml(cellValue);
-                        const shortName = escapeHtml(cellValue.substring(1, 3)); 
-                        const mobileName = `<span class="d-inline d-sm-none">${shortName}</span>`;
-                        const desktopName = `<span class="d-none d-sm-inline">${shortName}</span>`;
-                        cellDisplay = `${mobileName}${desktopName}`;
-                        tbodyHtml += `<td class="${cellClass}">${cellDisplay}</td>`;
-                    } else {
-                        cellClass = "col-class";
-                        if (cellValue.trim().toUpperCase() === "V") {
-                            cellDisplay = `<div class="check-mark">${CHECK_ICON}</div>`;
-                        } else {
-                            cellDisplay = escapeHtml(cellValue);
-                        }
-                        tbodyHtml += `<td class="${cellClass}">${cellDisplay}</td>`;
-                    }
-                }
-                tbodyHtml += "</tr>";
-            }
-            $tbody.innerHTML = tbodyHtml;
-        }
 
         /**
          * --- NEW: 渲染心得卡片到 8 個頁籤 ---
